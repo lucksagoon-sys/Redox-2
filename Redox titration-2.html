@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escape Lab: Redox Titration Quest (5:1 Stoichiometry)</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background-color: #f0fdf4;
+        }
+        .step-card {
+            transition: all 0.3s ease;
+        }
+        .step-locked {
+            opacity: 0.5;
+            pointer-events: none;
+            filter: grayscale(80%);
+        }
+        .badge-step {
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+
+    <!-- Header / Navbar -->
+    <header class="bg-teal-700 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-bolt text-2xl text-amber-300"></i>
+                <div>
+                    <h1 class="text-lg font-bold leading-tight">Escape Lab Quest</h1>
+                    <p class="text-xs text-teal-100">การไทเทรตรีดอกซ์ Fe²⁺ ด้วย MnO₄⁻ (อัตราส่วน 5 : 1)</p>
+                </div>
+            </div>
+            <button onclick="resetGame()" class="bg-teal-800 hover:bg-teal-900 text-xs text-teal-100 px-3 py-1.5 rounded-lg border border-teal-500 transition flex items-center gap-1">
+                <i class="fa-solid fa-rotate-right"></i> สุ่มโจทย์ใหม่
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-4xl mx-auto px-4 mt-6">
+
+        <!-- Stage 0: Warm-up Tutorial Card -->
+        <section id="tutorial-section" class="bg-white rounded-2xl shadow-sm border border-teal-200 p-6 mb-6">
+            <div class="flex items-center gap-3 border-b border-gray-100 pb-3 mb-4">
+                <div class="bg-amber-100 text-amber-700 p-2 rounded-xl">
+                    <i class="fa-solid fa-graduation-cap text-xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-gray-800">ทบทวนก่อนเริ่มภารกิจ: Stoichiometry รีดอกซ์ (5 : 1)</h2>
+                    <p class="text-xs text-gray-500">ระวัง! Fe²⁺ 5 โมล ทำปฏิกิริยาพอดีกับ MnO₄⁻ เพียง 1 โมล</p>
+                </div>
+            </div>
+
+            <div class="bg-amber-50/70 rounded-xl p-4 border border-amber-200 text-sm text-gray-700 space-y-3 mb-5">
+                <p class="font-bold text-teal-900">สมการปฏิกิริยาในสารละลายกรด:</p>
+                <div class="bg-white p-3 rounded-lg border border-amber-300 font-mono text-center text-teal-900 font-bold text-sm">
+                    5Fe<sup>2+</sup> + MnO<sub>4</sub><sup>-</sup> + 8H<sup>+</sup> &rarr; 5Fe<sup>3+</sup> + Mn<sup>2+</sup> + 4H<sub>2</sub>O
+                </div>
+                <p class="text-xs text-gray-600">
+                    *ข้อควรระวัง: เมื่อเติม MnO<sub>4</sub><sup>-</sup> ลงมา <strong>1 mmol</strong> จะทำปฏิกิริยาเปลี่ยน Fe<sup>2+</sup> ไปเป็น Fe<sup>3+</sup> ถึง <strong>5 mmol</strong><br>
+                    ดังนั้น: <strong class="text-rose-700">mmol Fe<sup>3+</sup> ที่เกิดขึ้น = mmol MnO<sub>4</sub><sup>-</sup> ที่เติม &times; 5</strong>
+                </p>
+            </div>
+
+            <!-- Mini Quiz inside Tutorial -->
+            <div class="bg-teal-50 rounded-xl p-4 border border-teal-200">
+                <h3 class="text-xs font-bold text-teal-800 uppercase tracking-wider mb-2">
+                    <i class="fa-solid fa-pen-to-square"></i> แบบทดสอบวัดความเข้าใจก่อนเริ่มเกม
+                </h3>
+                <p id="tut-quiz-text" class="text-sm text-gray-700 mb-3">
+                    <!-- Dynamic Text -->
+                </p>
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="relative flex-1 min-w-[200px]">
+                        <input type="number" step="any" id="tut-answer" placeholder="คำตอบ (mmol)" class="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-teal-500">
+                        <span class="absolute right-3 top-2.5 text-xs text-gray-400">mmol</span>
+                    </div>
+                    <button onclick="checkTutorialAnswer()" class="bg-teal-600 hover:bg-teal-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">
+                        ตรวจสอบคำตอบ
+                    </button>
+                </div>
+                <p id="tut-msg" class="text-xs mt-2 hidden"></p>
+            </div>
+        </section>
+
+        <!-- Main Game Content (Hidden until tutorial passed) -->
+        <div id="game-content" class="hidden space-y-6">
+
+            <!-- Scenario Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-teal-200 p-6">
+                <div class="flex items-center justify-between border-b border-gray-100 pb-3 mb-4">
+                    <div class="flex items-center gap-2">
+                        <span class="bg-teal-100 text-teal-800 text-xs font-bold px-2.5 py-1 rounded-full">กรณีศึกษา</span>
+                        <h2 class="text-base font-bold text-gray-800">การไทเทรต Fe<sup>2+</sup> ด้วย KMnO<sub>4</sub> (อัตราส่วน 5 : 1)</h2>
+                    </div>
+                    <span class="text-xs text-gray-500"><i class="fa-solid fa-bolt"></i> Redox Reaction</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 text-sm">
+                    <div class="space-y-1.5">
+                        <p class="text-xs font-semibold text-slate-500 uppercase">สารในบีกเกอร์ (Analyte)</p>
+                        <p class="text-gray-800"><span class="font-bold text-teal-700">Fe<sup>2+</sup>:</span> ความเข้มข้น <span id="scen-m-fe" class="font-bold"></span> M, ปริมาตร <span id="scen-v-fe" class="font-bold"></span> mL</p>
+                    </div>
+                    <div class="space-y-1.5">
+                        <p class="text-xs font-semibold text-slate-500 uppercase">สารในบิวเรตต์ (Titrant)</p>
+                        <p class="text-gray-800"><span class="font-bold text-teal-700">KMnO<sub>4</sub>:</span> ความเข้มข้น <span id="scen-m-mn" class="font-bold"></span> M</p>
+                    </div>
+                </div>
+
+                <div class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-blue-500 text-base"></i>
+                    <span><strong>สภาวะที่สนใจ:</strong> คำนวณหาค่าต่าง ๆ เมื่อเติม KMnO<sub>4</sub> ลงไปปริมาตร <strong id="scen-v-added" class="text-blue-900 text-sm"></strong> mL (สภาวะก่อนจุดสมมูล)</span>
+                </div>
+            </div>
+
+            <!-- STAGE 1 -->
+            <div id="stage-1" class="step-card bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div id="badge-1" class="badge-step bg-slate-200 text-slate-700">1</div>
+                        <div>
+                            <h3 class="font-bold text-gray-800">ด่านที่ 1: คำนวณปริมาตรจุดสมมูล (Equivalence Volume)</h3>
+                            <p class="text-xs text-gray-500">หาปริมาตรของ KMnO<sub>4</sub> ที่ต้องใช้ทำปฏิกิริยาพอดีกับ Fe<sup>2+</sup> ทั้งหมด</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">ปริมาตร KMnO<sub>4</sub> ที่จุดสมมูล (V<sub>eq</sub>) (mL):</label>
+                        <div class="flex gap-2">
+                            <input type="number" step="any" id="ans-veq" placeholder="เช่น 20.00" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                            <button onclick="checkStage1()" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">ส่งคำตอบ</button>
+                        </div>
+                        <p id="msg-stage-1" class="text-xs mt-2 hidden"></p>
+                    </div>
+
+                    <!-- Hint Accordion -->
+                    <details class="text-xs text-gray-500 bg-gray-50 rounded-lg p-2.5 border border-gray-200">
+                        <summary class="font-semibold text-teal-700 cursor-pointer">💡 ดูสูตรคำนวณและแนวคิด</summary>
+                        <div class="mt-2 space-y-1 text-gray-600 pl-2">
+                            <p>เนื่องจากปฏิกิริยาเป็น 5:1 (Fe<sup>2+</sup> 5 โมล ใช้ MnO<sub>4</sub><sup>-</sup> 1 โมล) ดังนั้นที่จุดสมมูล:</p>
+                            <p class="font-mono text-teal-800">mmol Fe<sup>2+</sup> = 5 &times; (mmol KMnO<sub>4</sub>)</p>
+                            <p class="font-mono text-teal-800">(M<sub>Fe</sub> &times; V<sub>Fe</sub>) = 5 &times; (M<sub>Mn</sub> &times; V<sub>eq</sub>)</p>
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+            <!-- STAGE 2 -->
+            <div id="stage-2" class="step-card step-locked bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div id="badge-2" class="badge-step bg-slate-200 text-slate-700">2</div>
+                        <div>
+                            <h3 class="font-bold text-gray-800">ด่านที่ 2: หาจำนวนมิลลิโมล (mmol) และ Stoichiometry Trap</h3>
+                            <p class="text-xs text-gray-500">คำนวณจำนวน mmol เมื่อเติม KMnO<sub>4</sub> ปริมาตร <span class="v-added-span font-bold"></span> mL</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">1) mmol Fe<sup>2+</sup> เริ่มต้น:</label>
+                            <input type="number" step="any" id="ans-mmol-fe-init" placeholder="mmol" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">2) mmol MnO<sub>4</sub><sup>-</sup> ที่เติมลงไป:</label>
+                            <input type="number" step="any" id="ans-mmol-mn-added" placeholder="mmol" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-rose-700 mb-1">3) mmol Fe<sup>3+</sup> ที่เกิดขึ้น (อย่าลืมคูณ 5!):</label>
+                            <input type="number" step="any" id="ans-mmol-fe3-prod" placeholder="mmol" class="w-full px-3 py-2 border border-rose-300 rounded-lg text-sm focus:ring-2 focus:ring-rose-500 focus:outline-none bg-rose-50/30">
+                        </div>
+                    </div>
+
+                    <button onclick="checkStage2()" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 rounded-lg text-sm font-medium transition">ส่งคำตอบ ด่าน 2</button>
+                    <p id="msg-stage-2" class="text-xs mt-1 hidden"></p>
+
+                    <!-- Hint Accordion -->
+                    <details class="text-xs text-gray-500 bg-gray-50 rounded-lg p-2.5 border border-gray-200">
+                        <summary class="font-semibold text-teal-700 cursor-pointer">💡 ดูสูตรคำนวณและแนวคิด</summary>
+                        <div class="mt-2 space-y-1 text-gray-600 pl-2">
+                            <p>• mmol Fe<sup>2+</sup> เริ่มต้น = M<sub>Fe</sub> &times; V<sub>Fe</sub></p>
+                            <p>• mmol MnO<sub>4</sub><sup>-</sup> เติม = M<sub>Mn</sub> &times; V<sub>KMnO4 ที่เติม</sub></p>
+                            <p>• ⚠️ <strong>จุดสำคัญ:</strong> mmol Fe<sup>3+</sup> ที่เกิด = <strong>mmol MnO<sub>4</sub><sup>-</sup> ที่เติม &times; 5</strong></p>
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+            <!-- STAGE 3 -->
+            <div id="stage-3" class="step-card step-locked bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div id="badge-3" class="badge-step bg-slate-200 text-slate-700">3</div>
+                        <div>
+                            <h3 class="font-bold text-gray-800">ด่านที่ 3: ปริมาตรสุทธิ และ mmol Fe<sup>2+</sup> ที่เหลืออยู่</h3>
+                            <p class="text-xs text-gray-500">หาปริมาตรรวมของสารละลาย และ mmol ของ Fe<sup>2+</sup> ที่ยังไม่ถูกออกซิไดซ์</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">1) ปริมาตรรวมสารละลาย (V<sub>total</sub>) (mL):</label>
+                            <input type="number" step="any" id="ans-v-total" placeholder="mL" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1">2) mmol Fe<sup>2+</sup> ที่เหลืออยู่ในบีกเกอร์:</label>
+                            <input type="number" step="any" id="ans-mmol-fe2-remain" placeholder="mmol" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <button onclick="checkStage3()" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 rounded-lg text-sm font-medium transition">ส่งคำตอบ ด่าน 3</button>
+                    <p id="msg-stage-3" class="text-xs mt-1 hidden"></p>
+
+                    <!-- Hint Accordion -->
+                    <details class="text-xs text-gray-500 bg-gray-50 rounded-lg p-2.5 border border-gray-200">
+                        <summary class="font-semibold text-teal-700 cursor-pointer">💡 ดูสูตรคำนวณและแนวคิด</summary>
+                        <div class="mt-2 space-y-1 text-gray-600 pl-2">
+                            <p>• V<sub>total</sub> = V<sub>Fe</sub> + V<sub>KMnO4 ที่เติม</sub></p>
+                            <p>• mmol Fe<sup>2+</sup> เหลือ = mmol Fe<sup>2+</sup> เริ่มต้น - mmol Fe<sup>3+</sup> ที่เกิดขึ้น</p>
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+            <!-- STAGE 4 -->
+            <div id="stage-4" class="step-card step-locked bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div id="badge-4" class="badge-step bg-slate-200 text-slate-700">4</div>
+                        <div>
+                            <h3 class="font-bold text-gray-800">ด่านที่ 4: คำนวณอัตราส่วน [Fe<sup>2+</sup>] / [Fe<sup>3+</sup>]</h3>
+                            <p class="text-xs text-gray-500">หาอัตราส่วนความเข้มข้นเพื่อใช้คำนวณในสมการเนิร์นสต์</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">อัตราส่วน [Fe<sup>2+</sup>] / [Fe<sup>3+</sup>]:</label>
+                        <div class="flex gap-2">
+                            <input type="number" step="any" id="ans-ratio" placeholder="เช่น 2.50" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                            <button onclick="checkStage4()" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">ส่งคำตอบ</button>
+                        </div>
+                        <p id="msg-stage-4" class="text-xs mt-2 hidden"></p>
+                    </div>
+
+                    <!-- Hint Accordion -->
+                    <details class="text-xs text-gray-500 bg-gray-50 rounded-lg p-2.5 border border-gray-200">
+                        <summary class="font-semibold text-teal-700 cursor-pointer">💡 ดูสูตรคำนวณและแนวคิด</summary>
+                        <div class="mt-2 space-y-1 text-gray-600 pl-2">
+                            <p>• [Fe<sup>2+</sup>] / [Fe<sup>3+</sup>] = (mmol Fe<sup>2+</sup> ที่เหลือ) / (mmol Fe<sup>3+</sup> ที่เกิดขึ้น)</p>
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+            <!-- STAGE 5 -->
+            <div id="stage-5" class="step-card step-locked bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div id="badge-5" class="badge-step bg-slate-200 text-slate-700">5</div>
+                        <div>
+                            <h3 class="font-bold text-gray-800">ด่านที่ 5: Final Boss - คำนวณศักย์ไฟฟ้าด้วย Nernst Equation</h3>
+                            <p class="text-xs text-gray-500">คำนวณค่า E ของสารละลาย (กำหนด E° Fe³⁺/Fe²⁺ = 0.770 V)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">ศักย์ไฟฟ้าของสารละลาย E (Volt) (ทศนิยม 3 ตำแหน่ง):</label>
+                        <div class="flex gap-2">
+                            <input type="number" step="any" id="ans-e-cell" placeholder="เช่น 0.746" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none">
+                            <button onclick="checkStage5()" class="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-sm transition">ปลดล็อกประตู!</button>
+                        </div>
+                        <p id="msg-stage-5" class="text-xs mt-2 hidden"></p>
+                    </div>
+
+                    <!-- Hint Accordion -->
+                    <details class="text-xs text-gray-500 bg-gray-50 rounded-lg p-2.5 border border-gray-200">
+                        <summary class="font-semibold text-teal-700 cursor-pointer">💡 ดูสูตรคำนวณและแนวคิด</summary>
+                        <div class="mt-2 space-y-1 text-gray-600 pl-2">
+                            <p>• E = 0.770 - 0.0592 &times; log<sub>10</sub>( [Fe<sup>2+</sup>] / [Fe<sup>3+</sup>] )</p>
+                        </div>
+                    </details>
+                </div>
+            </div>
+
+            <!-- Victory Card (Hidden initially) -->
+            <div id="victory-card" class="hidden bg-gradient-to-br from-emerald-500 to-teal-700 text-white rounded-2xl shadow-xl p-8 text-center space-y-4">
+                <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto text-4xl mb-2 backdrop-blur-sm">
+                    🎓
+                </div>
+                <h2 class="text-2xl font-black">ยินดีด้วย! คุณผ่านภารกิจแล็บไทเทรตรีดอกซ์เรียบร้อยแล้ว</h2>
+                <p class="text-sm text-teal-100 max-w-lg mx-auto">
+                    คุณพิชิตการคำนวณการไทเทรตรีดอกซ์แบบ 5 : 1 และการประยุกต์ใช้ Nernst Equation ได้อย่างสมบูรณ์แบบแล้วครับ! 🥳
+                </p>
+                <div class="pt-4">
+                    <button onclick="resetGame()" class="bg-white text-teal-800 hover:bg-teal-50 font-bold px-6 py-3 rounded-xl shadow-lg transition transform hover:-translate-y-0.5">
+                        <i class="fa-solid fa-arrows-rotate"></i> เริ่มฝึกทำโจทย์ถัดไป (สุ่มตัวเลขใหม่)
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <script>
+        // State Variables
+        let state = {
+            mFe: 0,
+            vFe: 0,
+            mMn: 0,
+            vEq: 0,
+            vAdded: 0,
+            mmolFeInit: 0,
+            mmolMnAdded: 0,
+            mmolFe3Prod: 0,
+            vTotal: 0,
+            mmolFe2Remain: 0,
+            ratioFe: 0,
+            eCell: 0,
+            tutMnMmol: 0,
+            tutFe3Prod: 0
+        };
+
+        window.onload = function() {
+            initTutorial();
+            generateScenario();
+        };
+
+        function initTutorial() {
+            state.tutMnMmol = parseFloat((Math.floor(Math.random() * 4 + 1) * 0.02).toFixed(2));
+            state.tutFe3Prod = parseFloat((state.tutMnMmol * 5).toFixed(2));
+
+            document.getElementById('tut-quiz-text').innerHTML = 
+                `<strong>คำถาม:</strong> ในการไทเทรต ถ้าเติม MnO<sub>4</sub><sup>-</sup> ลงไป <strong>${state.tutMnMmol} mmol</strong> จะเกิด Fe<sup>3+</sup> ขึ้นทั้งหมดกี่ <strong>mmol</strong>? (ปฏิกิริยา: Fe<sup>2+</sup> 5 โมล ทำปฏิกิริยากับ MnO<sub>4</sub><sup>-</sup> 1 โมล)`;
+        }
+
+        function checkTutorialAnswer() {
+            const userAns = parseFloat(document.getElementById('tut-answer').value);
+            const msgEl = document.getElementById('tut-msg');
+            
+            if (isNaN(userAns)) {
+                showMsg(msgEl, 'กรุณากรอกตัวเลขคำตอบ', false);
+                return;
+            }
+
+            if (isClose(userAns, state.tutFe3Prod, 0.02)) {
+                showMsg(msgEl, 'ถูกต้อง! อย่าลืมคูณ 5 ในด่านที่ 2 ของเกมจริงนะครับ', true);
+                setTimeout(() => {
+                    document.getElementById('game-content').classList.remove('hidden');
+                    document.getElementById('game-content').scrollIntoView({ behavior: 'smooth' });
+                }, 800);
+            } else {
+                showMsg(msgEl, `คำตอบยังไม่ถูกต้อง จำไว้ว่า mmol Fe³⁺ ที่เกิด = mmol MnO₄⁻ เติม × 5 (${state.tutMnMmol} × 5)`, false);
+            }
+        }
+
+        function generateScenario() {
+            state.mFe = parseFloat((Math.floor(Math.random() * 5 + 5) * 0.01).toFixed(3)); // 0.050 - 0.090 M
+            state.vFe = parseFloat((Math.floor(Math.random() * 4 + 3) * 10).toFixed(2)); // 30, 40, 50, 60 mL
+            state.mMn = parseFloat((Math.floor(Math.random() * 4 + 2) * 0.005).toFixed(3)); // 0.010 - 0.025 M
+
+            // Equivalence Volume vEq: (mFe * vFe) / (5 * mMn)
+            state.vEq = (state.mFe * state.vFe) / (5 * state.mMn);
+
+            // Added volume before equivalence point
+            const ratio = Math.random() * (0.60 - 0.20) + 0.20;
+            state.vAdded = parseFloat((state.vEq * ratio).toFixed(2));
+
+            // Derived exact values
+            state.mmolFeInit = state.mFe * state.vFe;
+            state.mmolMnAdded = state.mMn * state.vAdded;
+            state.mmolFe3Prod = state.mmolMnAdded * 5; // Stoichiometry multiply by 5!
+            state.vTotal = state.vFe + state.vAdded;
+            state.mmolFe2Remain = state.mmolFeInit - state.mmolFe3Prod;
+            state.ratioFe = state.mmolFe2Remain / state.mmolFe3Prod;
+            state.eCell = 0.770 - 0.0592 * Math.log10(state.ratioFe);
+
+            // Update UI
+            document.getElementById('scen-m-fe').innerText = state.mFe.toFixed(3);
+            document.getElementById('scen-v-fe').innerText = state.vFe.toFixed(2);
+            document.getElementById('scen-m-mn').innerText = state.mMn.toFixed(3);
+            document.getElementById('scen-v-added').innerText = state.vAdded.toFixed(2);
+            
+            document.querySelectorAll('.v-added-span').forEach(el => {
+                el.innerText = state.vAdded.toFixed(2);
+            });
+        }
+
+        function isClose(actual, target, tolerance = 0.015) {
+            if (target === 0) return Math.abs(actual) < 0.0001;
+            return Math.abs(actual - target) / Math.abs(target) <= tolerance;
+        }
+
+        function showMsg(el, text, isSuccess) {
+            el.innerText = text;
+            el.classList.remove('hidden', 'text-emerald-600', 'text-rose-600');
+            el.classList.add(isSuccess ? 'text-emerald-600' : 'text-rose-600');
+        }
+
+        function unlockStage(stageNum) {
+            const stageEl = document.getElementById(`stage-${stageNum}`);
+            const badgeEl = document.getElementById(`badge-${stageNum}`);
+            if (stageEl) {
+                stageEl.classList.remove('step-locked');
+                badgeEl.classList.remove('bg-slate-200', 'text-slate-700');
+                badgeEl.classList.add('bg-teal-600', 'text-white');
+            }
+        }
+
+        function completeStageBadge(stageNum) {
+            const badgeEl = document.getElementById(`badge-${stageNum}`);
+            if (badgeEl) {
+                badgeEl.classList.remove('bg-teal-600');
+                badgeEl.classList.add('bg-emerald-500');
+                badgeEl.innerHTML = '<i class="fa-solid fa-check"></i>';
+            }
+        }
+
+        // STAGE CHECKERS
+        function checkStage1() {
+            const ans = parseFloat(document.getElementById('ans-veq').value);
+            const msgEl = document.getElementById('msg-stage-1');
+            if (isNaN(ans)) {
+                showMsg(msgEl, 'กรุณากรอกตัวเลข', false);
+                return;
+            }
+
+            if (isClose(ans, state.vEq)) {
+                showMsg(msgEl, 'ถูกต้อง! คุณได้ปริมาตรจุดสมมูลแล้ว', true);
+                completeStageBadge(1);
+                unlockStage(2);
+            } else {
+                showMsg(msgEl, `ยังไม่ถูกต้อง สูตร V_eq = (M_Fe × V_Fe) / (5 × M_Mn)`, false);
+            }
+        }
+
+        function checkStage2() {
+            const ans1 = parseFloat(document.getElementById('ans-mmol-fe-init').value);
+            const ans2 = parseFloat(document.getElementById('ans-mmol-mn-added').value);
+            const ans3 = parseFloat(document.getElementById('ans-mmol-fe3-prod').value);
+            const msgEl = document.getElementById('msg-stage-2');
+
+            if (isNaN(ans1) || isNaN(ans2) || isNaN(ans3)) {
+                showMsg(msgEl, 'กรุณากรอกข้อมูลให้ครบถ้วนทุกช่อง', false);
+                return;
+            }
+
+            const ok1 = isClose(ans1, state.mmolFeInit);
+            const ok2 = isClose(ans2, state.mmolMnAdded);
+            const ok3 = isClose(ans3, state.mmolFe3Prod);
+
+            if (ok1 && ok2 && ok3) {
+                showMsg(msgEl, 'ถูกต้องทั้งหมด! เก่งมากที่คำนวณการคูณ 5 ได้ถูก', true);
+                completeStageBadge(2);
+                unlockStage(3);
+            } else {
+                let errText = 'มีคำตอบบางช่องยังไม่ถูกต้อง: ';
+                if (!ok1) errText += '[mmol Fe²⁺ เริ่มต้น] ';
+                if (!ok2) errText += '[mmol MnO₄⁻ เติม] ';
+                if (!ok3) errText += '[mmol Fe³⁺ เกิด - อย่าลืมเอา mmol MnO₄⁻ เติม × 5!] ';
+                showMsg(msgEl, errText, false);
+            }
+        }
+
+        function checkStage3() {
+            const ansV = parseFloat(document.getElementById('ans-v-total').value);
+            const ansMmol = parseFloat(document.getElementById('ans-mmol-fe2-remain').value);
+            const msgEl = document.getElementById('msg-stage-3');
+
+            if (isNaN(ansV) || isNaN(ansMmol)) {
+                showMsg(msgEl, 'กรุณากรอกข้อมูลให้ครบถ้วน', false);
+                return;
+            }
+
+            const okV = isClose(ansV, state.vTotal);
+            const okMmol = isClose(ansMmol, state.mmolFe2Remain);
+
+            if (okV && okMmol) {
+                showMsg(msgEl, 'ถูกต้อง! ได้ปริมาตรสุทธิและ mmol เหลือถูกแล้ว', true);
+                completeStageBadge(3);
+                unlockStage(4);
+            } else {
+                showMsg(msgEl, 'คำตอบยังไม่ถูกต้อง ตรวจสอบการรวมปริมาตรหรือการลบจำนวน mmol อีกครั้ง', false);
+            }
+        }
+
+        function checkStage4() {
+            const ans = parseFloat(document.getElementById('ans-ratio').value);
+            const msgEl = document.getElementById('msg-stage-4');
+
+            if (isNaN(ans)) {
+                showMsg(msgEl, 'กรุณากรอกตัวเลขสัดส่วนให้ถูกต้อง', false);
+                return;
+            }
+
+            if (isClose(ans, state.ratioFe)) {
+                showMsg(msgEl, 'ถูกต้อง! คำนวณอัตราส่วนสำเร็จ', true);
+                completeStageBadge(4);
+                unlockStage(5);
+            } else {
+                showMsg(msgEl, 'คำตอบยังไม่ถูกต้อง ใช้สูตร (mmol Fe²⁺ เหลือ) / (mmol Fe³⁺ เกิด)', false);
+            }
+        }
+
+        function checkStage5() {
+            const ans = parseFloat(document.getElementById('ans-e-cell').value);
+            const msgEl = document.getElementById('msg-stage-5');
+
+            if (isNaN(ans)) {
+                showMsg(msgEl, 'กรุณากรอกค่าศักย์ไฟฟ้า E', false);
+                return;
+            }
+
+            if (isClose(ans, state.eCell, 0.01)) {
+                showMsg(msgEl, 'ถูกต้องสมบูรณ์! ประตูห้องแล็บปลดล็อกแล้ว!', true);
+                completeStageBadge(5);
+                
+                document.getElementById('victory-card').classList.remove('hidden');
+                document.getElementById('victory-card').scrollIntoView({ behavior: 'smooth' });
+
+                if (window.confetti) {
+                    confetti({
+                        particleCount: 120,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
+                }
+            } else {
+                showMsg(msgEl, 'ค่า E ยังไม่ถูกต้อง ใช้สูตร 0.770 - 0.0592 × log10([Fe²⁺]/[Fe³⁺])', false);
+            }
+        }
+
+        function resetGame() {
+            const inputs = document.querySelectorAll('input');
+            inputs.forEach(input => input.value = '');
+
+            const msgs = document.querySelectorAll('[id^="msg-stage-"]');
+            msgs.forEach(msg => msg.classList.add('hidden'));
+
+            for (let i = 1; i <= 5; i++) {
+                const stage = document.getElementById(`stage-${i}`);
+                const badge = document.getElementById(`badge-${i}`);
+                if (i > 1) {
+                    stage.classList.add('step-locked');
+                    badge.className = 'badge-step bg-slate-200 text-slate-700';
+                    badge.innerText = i;
+                } else {
+                    badge.className = 'badge-step bg-slate-200 text-slate-700';
+                    badge.innerText = '1';
+                }
+            }
+
+            document.getElementById('victory-card').classList.add('hidden');
+            generateScenario();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
